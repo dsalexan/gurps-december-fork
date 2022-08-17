@@ -3,6 +3,7 @@
   "version": "0.9.0",
   "description": "NaN's GURPS Game Aid",
   "type": "module",
+  "main": "module/gurps.js",
   "scripts": {
     "test": "jest",
     "handlebars": "handlebars"
