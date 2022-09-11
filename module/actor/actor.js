@@ -625,7 +625,8 @@ export class GurpsActor extends Actor {
 
     if (foundry.utils.getProperty(this.data, PROPERTY_MOVEOVERRIDE_MANEUVER)) {
       let value = foundry.utils.getProperty(this.data, PROPERTY_MOVEOVERRIDE_MANEUVER)
-      let reason = i18n(GURPS.Maneuvers.get(this.getGurpsActorData().conditions.maneuver).label)
+      let mv = GURPS.Maneuvers.get(this.getGurpsActorData().conditions.maneuver)
+      let reason = !!mv ? i18n(mv.label) : ''
 
       adjustment = this._adjustMove(move, threshold, value, reason)
     }
@@ -1229,36 +1230,44 @@ export class GurpsActor extends Actor {
     const r = {
       'data.-=traits': null,
       'data.traits': ts,
-    };
-
-    if (!!p.portrait && game.settings.get(settings.SYSTEM_NAME, settings.SETTING_OVERWRITE_PORTRAITS)) {
-      const path = this.getPortraitPath();
-      let currentDir = "";
-      for (let i = 0; i < path.split("/").length; i++) {
-        try {
-          currentDir += path.split("/")[i] + "/";
-          await FilePicker.createDirectory("data", currentDir);
-        } catch (err) {
-          continue;
-        }
-      }
-        const filename = `${p.name}_${this.id}_portrait.png`.replaceAll(" ", "_");
-        const url = `data:image/png;base64,${p.portrait}`;
-        await fetch(url)
-          .then((res) => res.blob())
-          .then((blob) => {
-            const file = new File([blob], filename);
-            FilePicker.upload("data", path, file, {}, { notify: false });
-          });
-          r.img = (path + "/" + filename).replaceAll(" ", "_").replaceAll("//", "/");
-      }
-      return r;
     }
 
+    if (!!p.portrait && game.settings.get(settings.SYSTEM_NAME, settings.SETTING_OVERWRITE_PORTRAITS)) {
+      const path = this.getPortraitPath()
+      let currentDir = ''
+      for (let i = 0; i < path.split('/').length; i++) {
+        try {
+          currentDir += path.split('/')[i] + '/'
+          await FilePicker.createDirectory('data', currentDir)
+        } catch (err) {
+          continue
+        }
+      }
+      const filename = `${this.removeAccents(p.name)}${this.id}_portrait.png`.replaceAll(' ', '_')
+      const url = `data:image/png;base64,${p.portrait}`
+      await fetch(url)
+        .then(res => res.blob())
+        .then(blob => {
+          const file = new File([blob], filename)
+          FilePicker.upload('data', path, file, {}, { notify: false })
+        })
+      r.img = (path + '/' + filename).replaceAll(' ', '_').replaceAll('//', '/')
+    }
+    return r
+  }
 
   getPortraitPath() {
-    if (game.settings.get(settings.SYSTEM_NAME, settings.SETTING_PORTRAIT_PATH) == "global") return "images/portraits/";
-    return `worlds/${game.world.id}/images/portraits`;
+    if (game.settings.get(settings.SYSTEM_NAME, settings.SETTING_PORTRAIT_PATH) == 'global') return 'images/portraits/'
+    return `worlds/${game.world.id}/images/portraits`
+  }
+
+  removeAccents(str) {
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove accents
+      .replace(/([^\w]+|\s+)/g, '-') // Replace space and other characters by hyphen
+      .replace(/\-\-+/g, '-') // Replaces multiple hyphens by one hyphen
+      .replace(/(^-+|-+$)/g, '')
   }
 
   signedNum(x) {
@@ -1290,9 +1299,10 @@ export class GurpsActor extends Actor {
 
   importAdsFromGCSv3(ads) {
     let temp = []
-    for (let i of ads) {
-      temp = temp.concat(this.importAd(i, ''))
-    }
+    if (!!ads)
+      for (let i of ads) {
+        temp = temp.concat(this.importAd(i, ''))
+      }
     return {
       'data.-=ads': null,
       'data.ads': this.foldList(temp),
@@ -1308,7 +1318,7 @@ export class GurpsActor extends Actor {
     a.notes = ''
 
     if (i.cr != null) {
-      a.notes = '[' + game.i18n.localize('GURPS.CR' + i.cr.toString()) + ']'
+      a.notes = '[' + game.i18n.localize('GURPS.CR' + i.cr.toString()) + ': ' + a.name + ']'
     }
     if (i.modifiers?.length) {
       for (let j of i.modifiers)
@@ -1365,7 +1375,8 @@ export class GurpsActor extends Actor {
       s.points = i.points
       s.relativelevel = i.calc?.rsl
       s.notes = i.notes || ''
-    } else { // Usually containers
+    } else {
+      // Usually containers
       s.level = ''
     }
     let old = this._findElementIn('skills', s.uuid)
@@ -1735,7 +1746,8 @@ export class GurpsActor extends Actor {
     let p_total = total
     let p_race = 0
     for (let i of atts) p_atts += i.calc?.points
-    for (let i of ads) [p_ads, p_disads, p_quirks, p_race] = this.adPointCount(i, p_ads, p_disads, p_quirks, p_race, true)
+    for (let i of ads)
+      [p_ads, p_disads, p_quirks, p_race] = this.adPointCount(i, p_ads, p_disads, p_quirks, p_race, true)
     for (let i of skills) p_skills = this.skPointCount(i, p_skills)
     for (let i of spells) p_spells = this.skPointCount(i, p_spells)
     p_unspent -= p_atts + p_ads + p_disads + p_quirks + p_skills + p_spells + p_race
@@ -1833,7 +1845,7 @@ export class GurpsActor extends Actor {
             m.techlevel = i.tech_level || ''
             m.cost = i.value || ''
             m.notes = i.notes || ''
-            if (!!m.notes && w.notes) i.notes += '\n' + w.notes
+            if (!!m.notes && w.usage_notes) m.notes += '\n' + w.usage_notes
             m.pageRef(i.reference || '')
             m.mode = w.usage || ''
             m.import = w.calc?.level.toString() || '0'
@@ -1853,7 +1865,7 @@ export class GurpsActor extends Actor {
             r.legalityclass = i.legality_class || '4'
             r.ammo = 0
             r.notes = i.notes || ''
-            if (!!r.notes && w.notes) i.notes += '\n' + w.notes
+            if (!!r.notes && w.usage_notes) r.notes += '\n' + w.usage_notes
             r.pageRef(i.reference || '')
             r.mode = w.usage || ''
             r.import = w.calc?.level || '0'
@@ -1894,21 +1906,17 @@ export class GurpsActor extends Actor {
       var [a, d] = [0, 0]
       for (let j of i.children) [a, d, quirks, race] = this.adPointCount(j, a, d, quirks, race)
       if (toplevel) {
-        if (a > 0)
-          ads += a
-        else 
-          disads += a
-      } else
-        ads += a + d
-    }
-    else if (i.calc?.points == -1) quirks += i.calc?.points
+        if (a > 0) ads += a
+        else disads += a
+      } else ads += a + d
+    } else if (i.calc?.points == -1) quirks += i.calc?.points
     else if (i.calc?.points > 0) ads += i.calc?.points
     else disads += i.calc?.points
     return [ads, disads, quirks, race]
   }
 
   skPointCount(i, skills) {
-    if (i.type == ('skill_container' || 'spell_container') && !!i.children?.length)
+    if (i.type == ('skill_container' || 'spell_container') && i.children?.length)
       for (let j of i.children) skills = this.skPointCount(j, skills)
     else skills += i.points
     return skills
@@ -2282,7 +2290,7 @@ export class GurpsActor extends Actor {
       console.log(err.stack)
       let msg = [i18n_f('GURPS.importGenericError', { name: nm, error: err.name, message: err.message })]
       if (err.message == 'Maximum depth exceeded') msg.push(i18n('GURPS.importTooManyContainers'))
-      ui.notifications?.warn(msg.join('<br>'))
+      if (!supressMessage) ui.notifications?.warn(msg.join('<br>'))
       let content = await renderTemplate('systems/gurps/templates/chat-import-actor-errors.html', {
         lines: msg,
         version: version,

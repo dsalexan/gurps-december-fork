@@ -2,11 +2,40 @@
 
 If you can't access the Google doc, here is a [PDF](https://github.com/crnormand/gurps/raw/main/docs/Guide%20for%20GURPS%204e%20on%20Foundry%20VTT.pdf) of the latest version.
 
+Release 0.14.10 - 9/07/2022
+
+- Fixed Skill search if skill has no name
+- Catch bad maneuver data during import
+- Don't throw exception when a bad token is in combat
+- Protect char sheet positioning if bad position
+- Fixed PDF references like "b40-43"
+- Fixed, reinstalled individual dice results on targetted rolls.
+- Enhanced /show to accept -a (sort alphabetically), -pc and -npc flags
+- Fixed import of usage notes for melee and ranged weapons
+- Fixed /anim file selection algorithm (to detgermine best fit).   NOTE: You may need to adjust your current targeted /anim commands to get the right "look".
+- Added 'Show?' button to tooltip
+- Holding CTRL/CMD and clicking a "send to" will add, not replace player's bucket
+- Update to JB2A 0.4.9
+- Fixed parsing for 1/2 damage, ex: [2Dx0.5 cut]
+- Fixed other eqt cost in header bar
+- Fixed damage chat message "attacker" (which may be different than 'selected')
+
+Release 0.14.9 - 8/26/2022
+
+- @Neck fixed the item parsing bug (with missing names)
+
+Release 0.14.8 - 8/26/2022
+
+- Update JB2A to 0.4.7
+- Fixed GCS import to handle no advantages
+- Append the advantage name to a default Control Roll import from GCS
+- @Neck fixed the GCS portrait import issue (for accented names)
+
 Release 0.14.7 - 7/28/2022
 
 - Added 'disarmed' status effect icon
 - Fixed /pr (private roll), and /psr (private selected roll)
-- Update JB2A to 0.4.6
+- Update JB2A to 0.4.6 
 
 Release 0.14.6 - 7/24/2022
 
