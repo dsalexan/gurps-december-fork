@@ -1,4 +1,4 @@
-import Maneuvers from './actor/maneuver.js'
+// import Maneuvers from './actor/maneuver.js'
 
 // Our override of the TokenHUD; it removes the maneuver tokens from the list of status effects
 export default class GURPSTokenHUD extends TokenHUD {
@@ -10,7 +10,7 @@ export default class GURPSTokenHUD extends TokenHUD {
 
     // edit data.statusEffects to remove maneuver icons -- statusEffects is an Object, properties are the icon path
     for (const key in data.statusEffects) {
-      if (Maneuvers.isManeuverIcon(key)) {
+      if (GURPS.Maneuvers.isManeuverIcon(key)) {
         delete data.statusEffects[key]
       }
     }

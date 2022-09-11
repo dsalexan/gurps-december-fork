@@ -4,84 +4,6 @@ import ModifierBucketEditor from './tooltip-window.js'
 import { parselink } from '../../lib/parselink.js'
 import ResolveDiceRoll from '../modifier-bucket/resolve-diceroll-app.js'
 
-/**
- * Define some Typescript types.
- * @typedef {{mod: String, modint: Number, desc: String, plus: Boolean}} Modifier
- */
-Hooks.once('init', async function () {
-  Hooks.on('closeModifierBucketEditor', (/** @type {any} */ _, /** @type {JQuery} */ element) => {
-    $(element).hide() // To make this application appear to close faster, we will hide it before the animation
-  })
-
-  // @ts-ignore -- Need to look into why a GurpsRoll isn't a Roll
-  CONFIG.Dice.rolls.push(GurpsRoll)
-  CONFIG.Dice.terms["d"] = GurpsDie  // Hack to get Dice so nice working (it checks the terms["d"].name vs the Dice class name
-
-  // MONKEY_PATCH
-  // Patch DiceTerm.fromMatch to hi-jack the returned Die instances and in turn patch them to
-  // include the properties we need to support Physical Dice
-  if (!!DiceTerm.fromMatch) {
-    let _fromMatch = DiceTerm.fromMatch
-    let newFromMatch = function (/** @type {RegExpMatchArray} */ match) {
-      let result = _fromMatch(match)
-      if (result instanceof Die) result = new GurpsDie(result).asDiceTerm()
-      return result
-    }
-
-    DiceTerm.fromMatch = newFromMatch
-  }
-
-  // MONKEY_PATCH
-  // Patch Roll to have the properties we need for Physical Dice and modifier bucket handling.
-  // TODO With this change, GurpsRoll becomes redundant -- consider removing it??
-  if (!Roll.prototype._gurpsOriginalPrepareData) {
-    Roll.prototype._gurpsOriginalPrepareData = Roll.prototype._prepareData
-
-    let gurpsPrepareData = function (data) {
-      let d = Roll.prototype._gurpsOriginalPrepareData(data)
-      if (!d.hasOwnProperty('gmodc'))
-        Object.defineProperty(d, 'gmodc', {
-          get() {
-            let m = GURPS.ModifierBucket.currentSum()
-            GURPS.ModifierBucket.clear()
-            return parseInt(m)
-          },
-        })
-      d.gmod = GURPS.ModifierBucket.currentSum()
-      d.margin = GURPS.lastTargetedRoll?.margin
-      return d
-    }
-
-    Roll.prototype._prepareData = gurpsPrepareData
-
-    // Now add the dieOverride static variable and the isLoaded getter:
-    Roll.dieOverride = false
-    Object.defineProperty(Roll.prototype, 'isLoaded', {
-      // Used alternate define form, which defines 'this'.   get: () => {} does not set 'this'
-      get() {
-        return this.terms.some(term => term instanceof GurpsDie && !!term._loaded)
-      },
-    })
-  }
-
-})
-
-Hooks.once('ready', async function () {
-  // new GgaContextMenu($('body'), $('body'), '#accumulator-center', `Dmg Accumulator`, [
-  //   {
-  //     name: 'Roll Damage!',
-  //     icon: '<i class="fas fa-dice"></i>',
-  //     callback: () => {},
-  //     condition: () => true,
-  //   },
-  //   {
-  //     name: 'Clear Entry',
-  //     icon: '<i class="fas fa-trash"></i>',
-  //     callback: () => {},
-  //     condition: () => true,
-  //   },
-  // ])
-})
 
 export class GurpsDie extends Die {
   /**
@@ -366,6 +288,87 @@ class ModifierStack {
  * modifies it.
  */
 export class ModifierBucket extends Application {
+  static listen() {
+    /**
+     * Define some Typescript types.
+     * @typedef {{mod: String, modint: Number, desc: String, plus: Boolean}} Modifier
+     */
+    Hooks.once('init', async function () {
+      Hooks.on('closeModifierBucketEditor', (/** @type {any} */ _, /** @type {JQuery} */ element) => {
+        $(element).hide() // To make this application appear to close faster, we will hide it before the animation
+      })
+    
+      // @ts-ignore -- Need to look into why a GurpsRoll isn't a Roll
+      CONFIG.Dice.rolls.push(GurpsRoll)
+      CONFIG.Dice.terms["d"] = GurpsDie  // Hack to get Dice so nice working (it checks the terms["d"].name vs the Dice class name
+    
+      // MONKEY_PATCH
+      // Patch DiceTerm.fromMatch to hi-jack the returned Die instances and in turn patch them to
+      // include the properties we need to support Physical Dice
+      if (!!DiceTerm.fromMatch) {
+        let _fromMatch = DiceTerm.fromMatch
+        let newFromMatch = function (/** @type {RegExpMatchArray} */ match) {
+          let result = _fromMatch(match)
+          if (result instanceof Die) result = new GurpsDie(result).asDiceTerm()
+          return result
+        }
+    
+        DiceTerm.fromMatch = newFromMatch
+      }
+    
+      // MONKEY_PATCH
+      // Patch Roll to have the properties we need for Physical Dice and modifier bucket handling.
+      // TODO With this change, GurpsRoll becomes redundant -- consider removing it??
+      if (!Roll.prototype._gurpsOriginalPrepareData) {
+        Roll.prototype._gurpsOriginalPrepareData = Roll.prototype._prepareData
+    
+        let gurpsPrepareData = function (data) {
+          let d = Roll.prototype._gurpsOriginalPrepareData(data)
+          if (!d.hasOwnProperty('gmodc'))
+            Object.defineProperty(d, 'gmodc', {
+              get() {
+                let m = GURPS.ModifierBucket.currentSum()
+                GURPS.ModifierBucket.clear()
+                return parseInt(m)
+              },
+            })
+          d.gmod = GURPS.ModifierBucket.currentSum()
+          d.margin = GURPS.lastTargetedRoll?.margin
+          return d
+        }
+    
+        Roll.prototype._prepareData = gurpsPrepareData
+    
+        // Now add the dieOverride static variable and the isLoaded getter:
+        Roll.dieOverride = false
+        Object.defineProperty(Roll.prototype, 'isLoaded', {
+          // Used alternate define form, which defines 'this'.   get: () => {} does not set 'this'
+          get() {
+            return this.terms.some(term => term instanceof GurpsDie && !!term._loaded)
+          },
+        })
+      }
+    
+    })
+    
+    Hooks.once('ready', async function () {
+      // new GgaContextMenu($('body'), $('body'), '#accumulator-center', `Dmg Accumulator`, [
+      //   {
+      //     name: 'Roll Damage!',
+      //     icon: '<i class="fas fa-dice"></i>',
+      //     callback: () => {},
+      //     condition: () => true,
+      //   },
+      //   {
+      //     name: 'Clear Entry',
+      //     icon: '<i class="fas fa-trash"></i>',
+      //     callback: () => {},
+      //     condition: () => true,
+      //   },
+      // ])
+    })
+  }
+
   constructor(options = {}) {
     super(options)
 

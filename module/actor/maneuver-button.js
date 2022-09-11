@@ -1,6 +1,6 @@
 import { i18n } from '../../lib/utilities.js'
-import GurpsToken from '../token.js'
-import Maneuvers from './maneuver.js'
+// import GurpsToken from '../token.js'
+// import Maneuvers from './maneuver.js'
 
 /**
  * This class is used as a namespace for Show Art
@@ -14,7 +14,7 @@ export default class ManeuverHUDButton {
    */
   static async getInnerHtml(effects) {
     return await renderTemplate('systems/gurps/templates/maneuver-hud.hbs', {
-      maneuvers: Maneuvers.getAllData(),
+      maneuvers: GURPS.Maneuvers.getAllData(),
       effects: effects,
     })
   }

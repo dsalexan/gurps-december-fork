@@ -10,3 +10,5 @@ node_modules
 coverage
 .npmrc
 data/monsters.csv
+
+foundryconfig.json

@@ -51,6 +51,7 @@ import GURPSRange from '../lib/ranges.js'
 import Initiative from '../lib/initiative.js'
 import HitFatPoints from '../lib/hitpoints.js'
 import DamageChat from './damage/damagechat.js'
+import { NpcInput } from '../lib/npc-input.js'
 
 import MoustacheWax from '../lib/moustachewax.js'
 import * as Settings from '../lib/miscellaneous-settings.js'
@@ -94,6 +95,12 @@ if (!globalThis.GURPS) {
   if (GURPS.DEBUG) {
     GURPS.parseDecimalNumber = parseDecimalNumber
   }
+
+  GurpsActor.listen()
+  GurpsToken.listen()
+  Maneuvers.listen()
+  ModifierBucket.listen()
+  NpcInput.listen()
 
   AddChatHooks()
   JQueryHelpers()

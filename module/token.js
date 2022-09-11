@@ -1,31 +1,33 @@
 import { SETTING_MANEUVER_DETAIL, SETTING_MANEUVER_VISIBILITY, SYSTEM_NAME } from '../lib/miscellaneous-settings.js'
 import { GurpsActor } from './actor/actor.js'
-import Maneuvers from './actor/maneuver.js'
+// import Maneuvers from './actor/maneuver.js'
 import GurpsActiveEffect from './effects/active-effect.js'
 import { i18n } from '../lib/utilities.js'
 
-Hooks.once('init', async function () {
-  game.settings.register(SYSTEM_NAME, 'token-override-refresh-icon', {
-    name: i18n('GURPS.settingTokenOverrideRefresh', 'Override Token scaling'),
-    hint: i18n(
-      'GURPS.settingHintTokenOverrideRefresh',
-      'If "on", try to draw tokens to properly fit the hex grid. Overrides Foundry drawing functionality -- turn this off if there\'s any odd Foundry drawing behavior. Requires reloading the world.'
-    ),
-    scope: 'client',
-    config: true,
-    type: Boolean,
-    default: true,
-    onChange: value => console.log(`Token Override Refresh : ${value}`),
-  })
-})
-
-let overrideRefresh = false
-
-Hooks.once('ready', async function () {
-  overrideRefresh = game.settings.get(SYSTEM_NAME, 'token-override-refresh-icon')
-})
-
 export default class GurpsToken extends Token {
+  static overrideRefresh = false
+
+  static listen() {
+    Hooks.once('init', async function () {
+      game.settings.register(SYSTEM_NAME, 'token-override-refresh-icon', {
+        name: i18n('GURPS.settingTokenOverrideRefresh', 'Override Token scaling'),
+        hint: i18n(
+          'GURPS.settingHintTokenOverrideRefresh',
+          'If "on", try to draw tokens to properly fit the hex grid. Overrides Foundry drawing functionality -- turn this off if there\'s any odd Foundry drawing behavior. Requires reloading the world.'
+        ),
+        scope: 'client',
+        config: true,
+        type: Boolean,
+        default: true,
+        onChange: value => console.log(`Token Override Refresh : ${value}`),
+      })
+    })
+    
+    Hooks.once('ready', async function () {
+      GurpsToken.overrideRefresh = game.settings.get(SYSTEM_NAME, 'token-override-refresh-icon')
+    })
+  }
+
   static ready() {
     Hooks.on('createToken', GurpsToken._createToken)
   }
@@ -53,7 +55,7 @@ export default class GurpsToken extends Token {
    */
   async drawEffects() {
     // get only the Maneuvers
-    const effects = Maneuvers.getActiveEffectManeuvers(this.actor?.temporaryEffects || [])
+    const effects = GURPS.Maneuvers.getActiveEffectManeuvers(this.actor?.temporaryEffects || [])
 
     if (effects && effects.length > 0) {
       // restore the original token effects in case we've changed them
@@ -145,7 +147,7 @@ export default class GurpsToken extends Token {
       if (!game.combats.active.combatants.some(c => c.token?.id === this.id)) return
 
       // get the new maneuver's data
-      let maneuver = Maneuvers.get(maneuverName)
+      let maneuver = GURPS.Maneuvers.get(maneuverName)
 
       if (!maneuver) {
         this.actor._renderAllApps()
@@ -153,7 +155,7 @@ export default class GurpsToken extends Token {
       }
 
       // get all current active effects that are also maneuvers
-      let maneuvers = Maneuvers.getActiveEffectManeuvers(this.actor?.temporaryEffects)
+      let maneuvers = GURPS.Maneuvers.getActiveEffectManeuvers(this.actor?.temporaryEffects)
 
       if (maneuvers && maneuvers.length === 1) {
         // if there is a single active effect maneuver, update its data
@@ -184,7 +186,7 @@ export default class GurpsToken extends Token {
     let actor = /** @type {GurpsActor} */ (this.actor)
 
     // get all Active Effects that are also Maneuvers
-    let maneuvers = Maneuvers.getActiveEffectManeuvers(this.actor?.temporaryEffects)
+    let maneuvers = GURPS.Maneuvers.getActiveEffectManeuvers(this.actor?.temporaryEffects)
     for (const m of maneuvers) {
       this._toggleManeuverActiveEffect(m, { active: false })
     }
@@ -194,7 +196,7 @@ export default class GurpsToken extends Token {
    * @param {ActiveEffect} effect
    */
   async _toggleManeuverActiveEffect(effect, options = {}) {
-    let data = Maneuvers.get(GurpsActiveEffect.getName(effect))
+    let data = GURPS.Maneuvers.get(GurpsActiveEffect.getName(effect))
     await this.toggleEffect(data, options)
   }
 
@@ -210,7 +212,7 @@ export default class GurpsToken extends Token {
    */
   _refreshIcon() {
     // let override = game.settings.get(Settings.SYSTEM_NAME, 'token-override-refresh-icon')
-    if (!overrideRefresh) return super._refreshIcon()
+    if (!GurpsToken.overrideRefresh) return super._refreshIcon()
 
     // Size the texture aspect ratio within the token frame
     const tex = this.texture

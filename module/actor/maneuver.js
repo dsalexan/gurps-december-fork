@@ -248,13 +248,56 @@ const maneuvers = {
 }
 
 export default class Maneuvers {
+  static listen() {
+    // on create combatant, set the maneuver
+    Hooks.on('createCombatant', (/** @type {Combatant} */ combat, /** @type {any} */ _options, /** @type {any} */ id) => {
+      if (game.user?.isGM) {
+        console.log(id)
+        let token = /** @type {GurpsToken} */ (combat.token?.object)
+        if (!!token && token.id) token.setManeuver('do_nothing')
+      }
+    })
+    
+    // on delete combatant, remove the maneuver
+    Hooks.on('deleteCombatant', (/** @type {Combatant} */ combat, /** @type {any} */ _options, /** @type {any} */ id) => {
+      if (game.user?.isGM) {
+        console.log(id)
+        let token = /** @type {GurpsToken} */ (combat.token?.object)
+        if (!!token && token.id) {
+          console.log(`Delete Combatant: remove maneuver token[${token.id}]`)
+          token.removeManeuver()
+        }
+      }
+    })
+    
+    // On delete combat, remove the maneuver from every combatant
+    Hooks.on('deleteCombat', (/** @type {Combat} */ combat, /** @type {any} */ _options, /** @type {any} */ _id) => {
+      if (game.user?.isGM) {
+        let combatants = combat.data.combatants.contents
+        for (const combatant of combatants) {
+          if (combatant?.token) {
+            let token = /** @type {GurpsToken} */ (combatant.token.object)
+            console.log(`Delete Combat: remove maneuver token[${token.id}]`)
+            token.removeManeuver()
+          }
+        }
+      }
+    })
+    
+    // TODO consider subtracting 1 FP from every combatant that leaves combat
+  }
+
+  static getAll() {
+    return Maneuvers._maneuvers
+  }
+
   /**
    * @param {string} id
    * @returns {ManeuverData}
    */
   static get(id) {
     // @ts-ignore
-    return maneuvers[id]?.data
+    return Maneuvers.getAll()[id]?.data
   }
 
   /**
@@ -263,7 +306,7 @@ export default class Maneuvers {
    * @memberof Maneuvers
    */
   static isManeuverIcon(text) {
-    return Object.values(maneuvers)
+    return Object.values(Maneuvers.getAll())
       .map(m => m.icon)
       .includes(text)
   }
@@ -284,7 +327,7 @@ export default class Maneuvers {
    */
   static getManeuver(maneuverText) {
     // @ts-ignore
-    return maneuvers[maneuverText].data
+    return Maneuvers.getAll()[maneuverText].data
   }
 
   /**
@@ -295,15 +338,11 @@ export default class Maneuvers {
     return Maneuvers.getManeuver(maneuverText).icon ?? null
   }
 
-  static getAll() {
-    return maneuvers
-  }
-
   static getAllData() {
     let data = {}
-    for (const key in maneuvers) {
+    for (const key in Maneuvers.getAll()) {
       // @ts-ignore
-      data[key] = maneuvers[key].data
+      data[key] = Maneuvers.getAll()[key].data
     }
 
     return data
@@ -314,7 +353,7 @@ export default class Maneuvers {
    * @returns {ManeuverData[]|undefined}
    */
   static getByIcon(icon) {
-    return Object.values(maneuvers)
+    return Object.values(Maneuvers.getAll())
       .filter(it => it.icon === icon)
       .map(it => it.data)
   }
@@ -337,39 +376,4 @@ export default class Maneuvers {
   }
 }
 
-// on create combatant, set the maneuver
-Hooks.on('createCombatant', (/** @type {Combatant} */ combat, /** @type {any} */ _options, /** @type {any} */ id) => {
-  if (game.user?.isGM) {
-    console.log(id)
-    let token = /** @type {GurpsToken} */ (combat.token?.object)
-    if (!!token && token.id) token.setManeuver('do_nothing')
-  }
-})
-
-// on delete combatant, remove the maneuver
-Hooks.on('deleteCombatant', (/** @type {Combatant} */ combat, /** @type {any} */ _options, /** @type {any} */ id) => {
-  if (game.user?.isGM) {
-    console.log(id)
-    let token = /** @type {GurpsToken} */ (combat.token?.object)
-    if (!!token && token.id) {
-      console.log(`Delete Combatant: remove maneuver token[${token.id}]`)
-      token.removeManeuver()
-    }
-  }
-})
-
-// On delete combat, remove the maneuver from every combatant
-Hooks.on('deleteCombat', (/** @type {Combat} */ combat, /** @type {any} */ _options, /** @type {any} */ _id) => {
-  if (game.user?.isGM) {
-    let combatants = combat.data.combatants.contents
-    for (const combatant of combatants) {
-      if (combatant?.token) {
-        let token = /** @type {GurpsToken} */ (combatant.token.object)
-        console.log(`Delete Combat: remove maneuver token[${token.id}]`)
-        token.removeManeuver()
-      }
-    }
-  }
-})
-
-// TODO consider subtracting 1 FP from every combatant that leaves combat
+Maneuvers._maneuvers = maneuvers

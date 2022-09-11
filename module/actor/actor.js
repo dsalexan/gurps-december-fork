@@ -21,15 +21,18 @@ import * as HitLocations from '../hitlocation/hitlocation.js'
 import * as settings from '../../lib/miscellaneous-settings.js'
 import { SemanticVersion } from '../../lib/semver.js'
 import {
+  PROPERTY_MOVEOVERRIDE_MANEUVER,
+  PROPERTY_MOVEOVERRIDE_POSTURE,
+} from './maneuver.js'
+import {
   MOVE_NONE,
   MOVE_ONE,
   MOVE_STEP,
   MOVE_ONETHIRD,
   MOVE_HALF,
   MOVE_TWOTHIRDS,
-  PROPERTY_MOVEOVERRIDE_MANEUVER,
-  PROPERTY_MOVEOVERRIDE_POSTURE,
-} from './maneuver.js'
+  MOVES
+} from '../../lib/move.js'
 import { SmartImporter } from '../smart-importer.js'
 import { GurpsItem } from '../item.js'
 import GurpsToken from '../token.js'
@@ -51,11 +54,6 @@ import {
 } from './actor-components.js'
 import { multiplyDice } from '../utilities/damage-utils.js'
 
-// Ensure that ALL actors has the current version loaded into them (for migration purposes)
-Hooks.on('createActor', async function (/** @type {Actor} */ actor) {
-  await actor.update({ 'data.migrationversion': game.system.data.version })
-})
-
 export const MoveModes = {
   Ground: 'GURPS.moveModeGround',
   Air: 'GURPS.moveModeAir',
@@ -64,6 +62,13 @@ export const MoveModes = {
 }
 
 export class GurpsActor extends Actor {
+  static listen() {
+    // Ensure that ALL actors has the current version loaded into them (for migration purposes)
+    Hooks.on('createActor', async function (/** @type {Actor} */ actor) {
+      await actor.update({ 'data.migrationversion': game.system.data.version })
+    })
+  }
+
   /** @override */
   getRollData() {
     const data = super.getRollData()
@@ -104,6 +109,7 @@ export class GurpsActor extends Actor {
       delete this.apps[sheet.appId]
       await this.setFlag('core', 'sheetClass', newSheet)
       this.ignoreRender = false
+      this.skipRenderOnCalculateDerivedValues = false
       this.sheet.render(true)
     }
   }
@@ -268,7 +274,14 @@ export class GurpsActor extends Actor {
     let maneuver = this.effects.contents.find(it => it.data.flags?.core?.statusId === 'maneuver')
     this.getGurpsActorData().conditions.maneuver = !!maneuver ? maneuver.data.flags.gurps.name : 'undefined'
     this.ignoreRender = saved
-    if (!saved) setTimeout(() => this._forceRender(), 500)
+    if (this.skipRenderOnCalculateDerivedValues) {
+      saved = true
+      this.skipRenderOnCalculateDerivedValues = false
+    }
+    
+    if (!saved) {
+      // setTimeout(() => this._forceRender(), 500)
+    }
   }
 
   // Initialize the attribute starting values/levels.   The code is expecting 'value' or 'level' for many things, and instead of changing all of the GUIs and OTF logic
@@ -621,43 +634,19 @@ export class GurpsActor extends Actor {
       : {
           move: Math.max(1, Math.floor(move * threshold)),
           text: i18n('GURPS.moveFull'),
+          type: 'full'
         }
   }
 
   _adjustMove(move, threshold, value, reason) {
-    switch (value) {
-      case MOVE_NONE:
-        return { move: 0, text: i18n_f('GURPS.moveNone', { reason: reason }) }
-
-      case MOVE_ONE:
-        return {
-          move: 1,
-          text: i18n_f('GURPS.moveConstant', { value: 1, unit: 'yard', reason: reason }, '1 {unit}/second'),
-        }
-
-      case MOVE_STEP:
-        return { move: this._getStep(), text: i18n_f('GURPS.moveStep', { reason: reason }) }
-
-      case MOVE_ONETHIRD:
-        return {
-          move: Math.max(1, Math.ceil((move / 3) * threshold)),
-          text: i18n_f('GURPS.moveOneThird', { reason: reason }),
-        }
-
-      case MOVE_HALF:
-        return {
-          move: Math.max(1, Math.ceil((move / 2) * threshold)),
-          text: i18n_f('GURPS.moveHalf', { reason: reason }),
-        }
-
-      case MOVE_TWOTHIRDS:
-        return {
-          move: Math.max(1, Math.ceil(((2 * move) / 3) * threshold)),
-          text: i18n_f('GURPS.moveTwoThirds', { reason: reason }),
-        }
+    const adjustableMoves = [MOVE_NONE, MOVE_ONE, MOVE_STEP, MOVE_ONETHIRD, MOVE_HALF, MOVE_TWOTHIRDS]
+    for (const m of adjustableMoves) {
+      if (value === m) {
+        return MOVES[m].serialize(move, threshold, reason, this)
+      }
     }
 
-    return null
+    return null;
   }
 
   _getMoveAdjustedForPosture(move, threshold) {

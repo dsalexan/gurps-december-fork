@@ -18,7 +18,7 @@ import SlamChatProcessor from '../chat/slam.js'
 import TrackerChatProcessor from '../chat/tracker.js'
 import { Migration } from '../../lib/migration.js'
 import { AnimChatProcessor } from '../chat/anim.js'
-import Maneuvers from '../actor/maneuver.js'
+// import Maneuvers from '../actor/maneuver.js'
 
 export default function RegisterChatProcessors() {
   ChatProcessors.registerProcessor(new RollAgainstChatProcessor())
@@ -968,7 +968,7 @@ class ManeuverChatProcessor extends ChatProcessor {
   async process(line) {
     if (!this.match[2]) {
       this.priv(i18n("GURPS.chatHelpManeuver"))
-      Object.values(Maneuvers.getAll()).map(e => i18n(e.data.label)).forEach(e => this.priv(e))
+      Object.values(GURPS.Maneuvers.getAll()).map(e => i18n(e.data.label)).forEach(e => this.priv(e))
       return true
     }
     if (!game.combat) {
@@ -976,7 +976,7 @@ class ManeuverChatProcessor extends ChatProcessor {
       return false
     }
     let r = makeRegexPatternFrom(this.match[2].toLowerCase(), false)
-    let m = Object.values(Maneuvers.getAll()).find(e => i18n(e.data.label).toLowerCase().match(r))
+    let m = Object.values(GURPS.Maneuvers.getAll()).find(e => i18n(e.data.label).toLowerCase().match(r))
     if (!GURPS.LastActor) {
       ui.notifications.warn(i18n("GURPS.chatYouMustHaveACharacterSelected"))
       return false
