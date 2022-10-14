@@ -1415,6 +1415,13 @@ export class GurpsActorSheet extends ActorSheet {
         onclick: ev => this._onOpenEditor(ev),
       })
     }
+
+    b.push({
+      label: `Mobile`,
+      class: `mobile`,
+      icon: `fas fa-mobile`,
+      onclick: ev => this.actor.openSheet(`gurps.MobileGurpsActorSheet`),
+    })
     return b
   }
 
