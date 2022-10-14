@@ -96,6 +96,8 @@ if (!globalThis.GURPS) {
     GURPS.parseDecimalNumber = parseDecimalNumber
   }
 
+  GURPS.GurpsActor = GurpsActor
+
   GurpsActor.listen()
   GurpsToken.listen()
   Maneuvers.listen()
