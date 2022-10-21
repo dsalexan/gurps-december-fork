@@ -13,8 +13,8 @@ export const MOVE_HALF = 'half'
 export const MOVE_TWOTHIRDS = '×2/3'
 export const MOVE_FULL = 'full'
 
-export const PROPERTY_MOVEOVERRIDE_MANEUVER = 'data.moveoverride.maneuver'
-export const PROPERTY_MOVEOVERRIDE_POSTURE = 'data.moveoverride.posture'
+export const PROPERTY_MOVEOVERRIDE_MANEUVER = 'system.moveoverride.maneuver'
+export const PROPERTY_MOVEOVERRIDE_POSTURE = 'system.moveoverride.posture'
 
 CONFIG.Token.objectClass = GurpsToken
 const oldTemporaryEffects = Object.getOwnPropertyDescriptor(Actor.prototype, 'temporaryEffects')
@@ -91,7 +91,7 @@ class Maneuver {
     let changes = []
 
     changes.push({
-      key: 'data.conditions.maneuver',
+      key: 'system.conditions.maneuver',
       value: this._data.name,
       mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
     })
@@ -269,11 +269,11 @@ export default class Maneuvers {
         }
       }
     })
-    
+
     // On delete combat, remove the maneuver from every combatant
     Hooks.on('deleteCombat', (/** @type {Combat} */ combat, /** @type {any} */ _options, /** @type {any} */ _id) => {
       if (game.user?.isGM) {
-        let combatants = combat.data.combatants.contents
+        let combatants = combat.combatants.contents
         for (const combatant of combatants) {
           if (combatant?.token) {
             let token = /** @type {GurpsToken} */ (combatant.token.object)

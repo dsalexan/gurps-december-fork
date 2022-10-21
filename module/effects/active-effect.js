@@ -14,29 +14,27 @@ export default class GurpsActiveEffect extends ActiveEffect {
     Hooks.on('updateCombat', GurpsActiveEffect._updateCombat)
 
     Hooks.once('ready', function () {
-      const oldDuration = Object.getOwnPropertyDescriptor(ActiveEffect.prototype, 'duration')
-
-      Object.defineProperty(ActiveEffect.prototype, 'duration', {
-        get: function () {
-          let results = oldDuration?.get?.call(this)
-
-          if (results.type === 'none') {
-            // check if there is a termination condition
-            const d = this.data.duration
-            if (!!d?.termination) {
-              // TODO add core statusId flag and fix up results to show there is a duration of sorts
-              results = {
-                type: 'condition',
-                duration: null,
-                remaining: null,
-                termination: d.termination,
-                label: d.termination,
-              }
-            }
-          }
-          return results
-        },
-      })
+      // const oldDuration = Object.getOwnPropertyDescriptor(ActiveEffect.prototype, 'duration')
+      // Object.defineProperty(ActiveEffect.prototype, 'duration', {
+      // 	get: function() {
+      // 		let results = oldDuration?.get?.call(this)
+      // 		if (results.type === 'none') {
+      // 			// check if there is a termination condition
+      // 			const d = this.duration
+      // 			if (!!d?.termination) {
+      // 				// TODO add core statusId flag and fix up results to show there is a duration of sorts
+      // 				results = {
+      // 					type: 'condition',
+      // 					duration: null,
+      // 					remaining: null,
+      // 					termination: d.termination,
+      // 					label: d.termination,
+      // 				}
+      // 			}
+      // 		}
+      // 		return results
+      // 	},
+      // })
     })
   }
 
@@ -48,6 +46,7 @@ export default class GurpsActiveEffect extends ActiveEffect {
    * @param {*} _userId
    */
   static _preCreate(_effect, data, _options, _userId) {
+    console.debug(_effect, data, _options, _userId)
     if (data.duration && !data.duration.combat && game.combat) data.duration.combat = game.combats?.active?.id
   }
 
@@ -72,10 +71,10 @@ export default class GurpsActiveEffect extends ActiveEffect {
    * @param {*} _user
    */
   static async _apply(actor, change, _options, _user) {
-    if (change.key === 'data.conditions.maneuver') actor.replaceManeuver(change.value)
-    else if (change.key === 'data.conditions.posture') actor.replacePosture(change)
+    if (change.key === 'system.conditions.maneuver') actor.replaceManeuver(change.value)
+    else if (change.key === 'system.conditions.posture') actor.replacePosture(change)
     // else if (change.key === 'chat') change.effect.chat(actor, JSON.parse(change.value))
-    else console.log(change)
+    else console.debug(change)
   }
 
   /**
@@ -86,7 +85,7 @@ export default class GurpsActiveEffect extends ActiveEffect {
    * @param {*} _userId
    */
   static _update(_effect, _data, _options, _userId) {
-    console.log('update ' + _effect)
+    console.debug('update ', _effect)
   }
 
   /**
@@ -96,7 +95,7 @@ export default class GurpsActiveEffect extends ActiveEffect {
    * @param {*} _userId
    */
   static _delete(_effect, _data, _userId) {
-    console.log('delete ' + _effect)
+    console.debug('delete ' + _effect)
   }
 
   /**
@@ -115,10 +114,10 @@ export default class GurpsActiveEffect extends ActiveEffect {
       // go through all effects, removing those that have expired
       if (token && token.actor) {
         for (const effect of token.actor.effects) {
-          if (await effect.isExpired())
-            ui.notifications.info(
-              `${i18n('GURPS.effectExpired', 'Effect has expired: ')} '[${i18n(effect.data.label)}]'`
-            )
+          if (await effect.isExpired()) {
+            effect.delete()
+            ui.notifications.info(`${i18n('GURPS.effectExpired', 'Effect has expired: ')} '[${i18n(effect.label)}]'`)
+          }
         }
       }
     }
@@ -161,10 +160,10 @@ export default class GurpsActiveEffect extends ActiveEffect {
   static async clearEffectsOnSelectedToken() {
     const effect = _token.actor.effects.contents
     for (let i = 0; i < effect.length; i++) {
-      let condition = effect[i].data.label
-      let status = effect[i].data.disabled
-      let effect_id = effect[i].data._id
-      console.log(`Clear Effect: condition: [${condition}] status: [${status}] effect_id: [${effect_id}]`)
+      let condition = effect[i].label
+      let status = effect[i].disabled
+      let effect_id = effect[i]._id
+      console.debug(`Clear Effect: condition: [${condition}] status: [${status}] effect_id: [${effect_id}]`)
       if (status === false) {
         await _token.actor.deleteEmbeddedDocuments('ActiveEffect', [effect_id])
       }
@@ -174,7 +173,7 @@ export default class GurpsActiveEffect extends ActiveEffect {
   chat(actor, value) {
     if (!!value?.frequency && value.frequency === 'once') {
       if (this.chatmessages.includes(value.msg)) {
-        console.log(`Message [${value.msg}] already displayed, do nothing`)
+        console.debug(`Message [${value.msg}] already displayed, do nothing`)
         return
       }
     }
@@ -251,15 +250,15 @@ export default class GurpsActiveEffect extends ActiveEffect {
 
 /*
   {
-    key: fields.BLANK_STRING,
-    value: fields.BLANK_STRING,
-    mode: {
-      type: Number,
-      required: true,
-      default: CONST.ACTIVE_EFFECT_MODES.ADD,
-      validate: m => Object.values(CONST.ACTIVE_EFFECT_MODES).includes(m),
-      validationError: "Invalid mode specified for change in ActiveEffectData"
-      },
-      priority: fields.NUMERIC_FIELD
-    }
+	key: fields.BLANK_STRING,
+	value: fields.BLANK_STRING,
+	mode: {
+	  type: Number,
+	  required: true,
+	  default: CONST.ACTIVE_EFFECT_MODES.ADD,
+	  validate: m => Object.values(CONST.ACTIVE_EFFECT_MODES).includes(m),
+	  validationError: "Invalid mode specified for change in ActiveEffectData"
+	  },
+	  priority: fields.NUMERIC_FIELD
+	}
 */

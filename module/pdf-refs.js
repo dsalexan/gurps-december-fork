@@ -1,10 +1,12 @@
 import * as Settings from '../lib/miscellaneous-settings.js'
+import { PDFViewerSheet } from './pdf/sheet.js'
 
 export const SJGProductMappings = {
   ACT1: 'http://www.warehouse23.com/products/gurps-action-1-heroes',
   ACT3: 'http://www.warehouse23.com/products/gurps-action-3-furious-fists',
   B: 'http://www.warehouse23.com/products/gurps-basic-set-characters-and-campaigns',
   BS: 'http://www.warehouse23.com/products/gurps-banestorm',
+  BX: 'http://www.warehouse23.com/products/gurps-basic-set-characters-and-campaigns',
   DF1: 'http://www.warehouse23.com/products/gurps-dungeon-fantasy-1-adventurers-1',
   DF3: 'http://www.warehouse23.com/products/gurps-dungeon-fantasy-3-the-next-level-1',
   DF4: 'http://www.warehouse23.com/products/gurps-dungeon-fantasy-4-sages-1',
@@ -71,11 +73,11 @@ export function handleOnPdf(event) {
  * @param {string} links
  */
 export function handlePdf(links) {
-  // @ts-ignore
-  if (!ui.PDFoundry) {
-    ui.notifications?.warn('PDFoundry must be installed and configured to use links.')
-    return
-  }
+  // // @ts-ignore
+  // if (!ui.PDFoundry) {
+  // 	ui.notifications?.warn('PDFoundry must be installed and configured to use links.')
+  // 	return
+  // }
 
   // Just in case we get sent multiple links separated by commas, we will open them all
   links.split(',').forEach(link => {
@@ -98,20 +100,28 @@ export function handlePdf(links) {
           book = 'BX'
           page = page - 335
         } else page += 2
-    }
-    else if (book === 'BX') {
+    } else if (book === 'BX') {
       if (setting === 'Combined') {
-          book = 'B'
-          page += 2
-      } else page -= 335 
+        book = 'B'
+        page += 2
+      } else page -= 335
     }
-    // @ts-ignore
-    const pdf = ui.PDFoundry.findPDFDataByCode(book)
-    if (pdf === undefined) {
+    const pdfPages = []
+    game.journal.forEach(j => {
+      j.pages.forEach(p => {
+        if (p.type === 'pdf') pdfPages.push(p)
+      })
+    })
+    let journalPage = null
+    if (pdfPages.length) journalPage = pdfPages.find(e => e.system.code === book)
+    if (journalPage) {
+      const viewer = new PDFViewerSheet(journalPage, { pageNumber: page })
+      viewer.render(true)
+    } else {
       let url = GURPS.SJGProductMappings[book]
-      if (!url) url = 'http://www.warehouse23.com/products?taxons%5B%5D=558398545-sb' // The main GURPS page
-      window.open(url, '_blank')
-      // @ts-ignore
-    } else ui.PDFoundry.openPDF(pdf, { page })
+      if (url)
+        // url = 'http://www.warehouse23.com/products?taxons%5B%5D=558398545-sb' // The main GURPS page
+        window.open(url, '_blank')
+    }
   })
 }
