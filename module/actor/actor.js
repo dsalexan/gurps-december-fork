@@ -2010,6 +2010,7 @@ export class GurpsActor extends Actor {
     console.log('Starting commit')
     let deletes = Object.fromEntries(Object.entries(commit).filter(([key, value]) => key.includes('.-=')))
     let adds = Object.fromEntries(Object.entries(commit).filter(([key, value]) => !key.includes('.-=')))
+    adds['system._import'] = r
 
     try {
       this.ignoreRender = true

@@ -74,9 +74,8 @@
   "gridUnits": "yd",
   "primaryTokenAttribute": "HP",
   "secondaryTokenAttribute": "FP",
-  "url": "https://github.com/crnormand/gurps",
-  "manifest": "https://raw.githubusercontent.com/crnormand/gurps/release/system.json",
-  "download": "https://github.com/crnormand/gurps/releases/download/0.15.7/system.zip",
+  "url": "https://github.com/dsalexan/foundry-gurps-4e",
+  "manifest": "https://raw.githubusercontent.com/dsalexan/foundry-gurps-4e/december/system.json",
   "socket": true,
   "license": "LICENSE.txt"
 }
