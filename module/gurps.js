@@ -27,6 +27,7 @@ import {
   wait,
   quotedAttackName,
   requestFpHp,
+  sanitize
 } from '../lib/utilities.js'
 import { doRoll } from '../module/dierolls/dieroll.js'
 import { ResourceTrackerManager } from './actor/resource-tracker-manager.js'
@@ -112,7 +113,7 @@ if (!globalThis.GURPS) {
   Settings.initializeSettings()
   GURPS.EffectModifierControl = new EffectModifierControl()
 
-  // CONFIG.debug.hooks = true;
+  //CONFIG.debug.hooks = true;
 
   // Expose Maneuvers to make them easier to use in modules
   GURPS.Maneuvers = Maneuvers
@@ -435,9 +436,8 @@ if (!globalThis.GURPS) {
     // on a floating skill check, we want the skill with the highest relative skill level
     if (!!action.floatingAttribute) {
       if (!!actor) {
-        let value = GURPS.resolve(action.floatingAttribute, actordata.data)
+        let value = GURPS.resolve(action.floatingAttribute, actordata)
         let rsl = skill.relativelevel //  this is something like 'IQ-2' or 'Touch+3'
-        console.log(rsl)
         let valueText = rsl.replace(/^.*([+-]\d+)$/g, '$1')
         skillLevel = valueText === rsl ? parseInt(value) : parseInt(valueText) + parseInt(value)
       } else {
@@ -1252,7 +1252,8 @@ if (!globalThis.GURPS) {
     var t
     if (!actor) return t
     if (actor instanceof GurpsActor) actor = actor.system
-    let fullregex = new RegExp(removeOtf + makeRegexPatternFrom(sname, false, false), 'i')
+    let s = sanitize(sname)
+    let fullregex = new RegExp(removeOtf + makeRegexPatternFrom(s, false, false), 'i')
     let smode = ''
     let m = XRegExp.matchRecursive(sname, '\\(', '\\)', 'g', {
       unbalanced: 'skip-lazy',
@@ -1263,7 +1264,7 @@ if (!globalThis.GURPS) {
       sname = m[0].value.trim()
       smode = m[1].value.trim().toLowerCase()
     }
-    let nameregex = new RegExp(removeOtf + makeRegexPatternFrom(sname, false, false), 'i')
+    let nameregex = new RegExp(removeOtf + makeRegexPatternFrom(s, false, false), 'i')
     if (isMelee)
       // @ts-ignore
       recurselist(actor.melee, (e, k, d) => {
@@ -1330,14 +1331,15 @@ if (!globalThis.GURPS) {
       }
       return
     } else if ('path' in element.dataset) {
+      let srcid = !!actor ? "@" + actor.id + "@" : ''
       prefix = 'Roll vs '
       thing = GURPS._mapAttributePath(element.dataset.path)
       formula = '3d6'
       target = parseInt(element.innerText)
       if ('otf' in element.dataset)
         if (thing.toUpperCase() != element.dataset.otf.toUpperCase())
-          chatthing = thing + '/[' + element.dataset.otf + ']'
-        else chatthing = '[' + element.dataset.otf + ']'
+          chatthing = thing + '/[' + srcid + element.dataset.otf + ']'
+        else chatthing = '[' + srcid + element.dataset.otf + ']'
     } else if ('otf' in element.dataset) {
       // strip out any inner OtFs when coming from the UI.   Mainly attack names
       let otf = element.dataset.otf.trim()
@@ -1407,7 +1409,7 @@ if (!globalThis.GURPS) {
         let k = target.toUpperCase()
         // @ts-ignore
         delta = actor.system[k].value - delta
-        await actor.update({ ['data.' + k + '.value']: delta })
+        await actor.update({ ['system.' + k + '.value']: delta })
       }
       if (target.match(/^tr/i)) {
         await GURPS.ChatProcessors.startProcessingLines('/setEventFlags true false false\\\\/' + target + ' -' + delta) // Make the tracker command quiet
@@ -2030,13 +2032,21 @@ if (!globalThis.GURPS) {
         event.preventDefault()
         if (event.originalEvent) event = event.originalEvent
         const data = JSON.parse(event.dataTransfer.getData('text/plain'))
-        if (!!data && !!data.otf) {
+        if (!!data && (!!data.otf || !!data.bucket)) {
           let cmd = ''
           if (!!data.encodedAction) {
             let action = JSON.parse(atou(data.encodedAction))
             if (action.quiet) cmd += '!'
           }
-          cmd += data.otf
+          if (data.otf)
+            cmd += data.otf
+          else {
+            let sep = ''
+            data.bucket.forEach(otf => {
+              cmd += sep + otf
+               sep = ' & '
+            })
+          }
           if (!!data.displayname) {
             let q = '"'
             if (data.displayname.includes('"')) q = "'"
@@ -2354,13 +2364,13 @@ if (!globalThis.GURPS) {
           content: `<p>${srcActor.name} wants to give you ${resp.itemData.name} (${resp.count}),</p><br>Ok?`,
           yes: () => {
             // @ts-ignore
-            let destKey = destactor._findEqtkeyForId('globalid', resp.itemData.system.globalid)
+            let destKey = destactor._findEqtkeyForId('name', resp.itemData.name)
             if (!!destKey) {
               // already have some
               // @ts-ignore
               let destEqt = getProperty(destactor, destKey)
               // @ts-ignore
-              destactor.updateEqtCount(destKey, destEqt.count + resp.count)
+              destactor.updateEqtCount(destKey, +destEqt.count + resp.count)
             } else {
               resp.itemData.system.equipped = true
               // @ts-ignore
@@ -2399,7 +2409,7 @@ if (!globalThis.GURPS) {
           srcActor.deleteEquipment(resp.srckey)
         } else {
           // @ts-ignore
-          srcActor.updateEqtCount(resp.srckey, eqt.count - resp.count)
+          srcActor.updateEqtCount(resp.srckey, +eqt.count - resp.count)
         }
         // @ts-ignore
         let destActor = game.actors.get(resp.destactorid)
@@ -2483,7 +2493,18 @@ if (!globalThis.GURPS) {
 
     GurpsToken.ready()
     TriggerHappySupport.init()
-
+    
+    CONFIG.TextEditor.enrichers = CONFIG.TextEditor.enrichers.concat([
+    {
+        pattern : /\[.*\]/gm,
+        enricher : async (match, options) => {
+            let s = gurpslink(match[0])
+            const doc = document.createElement("span");
+            doc.innerHTML = s;
+            return doc;
+        }
+    }])
+   
     // End of system "READY" hook.
     Hooks.call('gurpsready')
   })

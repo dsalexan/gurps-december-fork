@@ -181,7 +181,41 @@ export class AnimChatProcessor extends ChatProcessor {
   }
 
   async awaitClick(line) {
+    if (line.match(/@\d+,\d+/)) {
+      console.log("Duplicate request for click: " + line)
+      return
+    }
     GURPS.IgnoreTokenSelect = true
+    
+    try {
+      const location = await warpgate.crosshairs.show(
+      {
+          interval: 0,
+          size: 1,
+          drawOutline: false,
+          lockSize: true,
+          labelOffset: { x:0, y:-150 },
+          icon: 'icons/skills/targeting/crosshair-bars-yellow.webp',
+          //icon: 'icons/magic/symbols/runes-triangle-blue.webp', 
+          label: 'Click to target',
+      })
+      let grid_size = canvas.scene.grid.size
+      canvas.tokens.targetObjects({
+        x: location.x - grid_size / 2,
+        y: location.y - grid_size / 2,
+        height: grid_size,
+        width: grid_size,
+        releaseOthers: true,
+      })
+      GURPS.IgnoreTokenSelect = false
+      line = line + ' @' + parseInt(location.x) + ',' + parseInt(location.y)
+      this.registry.processLine(line)
+      return
+    } catch (error) { 
+      GURPS.IgnoreTokenSelect = false
+      console.log(error)
+    }
+
     return new Promise((resolve, reject) => {
       window.addEventListener(
         'mousedown',
@@ -347,6 +381,10 @@ export class AnimChatProcessor extends ChatProcessor {
       ]
     }
     if (destTokens.length == 0) {
+      if (!srcToken) {
+        ui.notifications.error('No token or actor selected')
+        return false
+      }
       ui.notifications.warn('Please click the target location')
       this.send()
       await this.awaitClick((this.msgs().quiet ? '!' : '') + line.replace(/@ *$/, ''))

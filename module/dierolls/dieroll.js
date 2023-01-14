@@ -70,6 +70,7 @@ export async function doRoll({
     await roll.evaluate({ async: true })
     let rtotal = roll.total
 
+    chatdata['showPlus'] = true
     chatdata['rtotal'] = rtotal
     chatdata['loaded'] = !!roll.isLoaded
     chatdata['rolls'] = !!roll.dice[0] ? roll.dice[0].results.map(it => it.result.toString()).join(',') : ''
@@ -95,7 +96,7 @@ export async function doRoll({
 
     if (margin > 0 && !!optionalArgs.obj && !!optionalArgs.obj.rcl) {
       // if the attached obj (see handleRoll()) as Recoil information, do the additional math
-      let rofrcl = Math.floor(margin / parseInt(optionalArgs.obj.rcl)) + 1
+      let rofrcl = Math.floor(margin / parseFloat(optionalArgs.obj.rcl)) + 1
       if (!!optionalArgs.obj.rof) {
         let rof = optionalArgs.obj.rof
         let m = rof.match(/(\d+)[×xX\*](\d+)/) // Support shotgun RoF (3x9)

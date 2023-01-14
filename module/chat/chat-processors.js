@@ -67,6 +67,7 @@ export default function RegisterChatProcessors() {
   ChatProcessors.registerProcessor(new ManeuverChatProcessor())
   ChatProcessors.registerProcessor(new RepeatChatProcessor())
   ChatProcessors.registerProcessor(new StopChatProcessor())
+  ChatProcessors.registerProcessor(new ModChatProcessor())
 }
 
 class SoundChatProcessor extends ChatProcessor {
@@ -94,10 +95,34 @@ class SoundChatProcessor extends ChatProcessor {
       volume: v,
       loop: false,
     }
-    AudioHelper.play(data, true).then(sound => {
-      if (sound.failed) ui.notifications.warn('Unable to play: ' + data.src)
-    })
-  }
+    if (!data.src.endsWith('.txt')) {
+      AudioHelper.play(data, true).then(sound => {
+        if (sound.failed) ui.notifications.warn('Unable to play: ' + data.src)
+      })
+      return true
+    }
+      
+    let xhr = new XMLHttpRequest()
+    xhr.open('GET', data.src, true)
+    xhr.responseType = 'text'
+    xhr.onload = function () {
+      if (xhr.readyState === xhr.DONE) {
+        if (xhr.status === 200) {
+          let list = xhr.responseText.split('\n').map(s => s.replace(/^\.\//, '')).filter(t => !!t && !t.endsWith('.txt'))
+          let i = Math.floor(Math.random() * list.length);
+          let f= data.src.split('/').slice(0, -1).join('/') + "/" + list[i]
+          console.log(`Loaded ${list.length} sounds, picked: ${i}:${f}`)
+          data.src = f
+          AudioHelper.play(data, true).then(sound => {
+           if (sound.failed) ui.notifications.warn('Unable to play: ' + data.src)
+          })
+         
+        }
+      }
+    }
+    xhr.send(null)
+  } 
+
 }
 
 class QuickDamageChatProcessor extends ChatProcessor {
@@ -547,7 +572,8 @@ class SelectChatProcessor extends ChatProcessor {
   process(line) {
     let m = this.match
     if (m[3] == '*') {
-      canvas.tokens.placeables.forEach(t => t.control({ releaseOthers: false }))
+      canvas.activeLayer.controlAll();
+      //for (let t of canvas.tokens.placeables) {t.control({ releaseOthers: false })}
       return true
     }
     if (!!m[2]) {
@@ -985,12 +1011,12 @@ class DevChatProcessor extends ChatProcessor {
   }
 
   matches(line) {
-    this.match = line.match(/^\/dev +(.*)/i)
+    this.match = line.match(/^\/dev *(.*)/i)
     return !!this.match
   }
   async process(line) {
     let m = this.match[1].match(/(\w+)(.*)/)
-    switch (m[1]) {
+    switch (m ? m[1] : '') {
       case 'open': {
         // Open the full character sheet for an Actor
         let a = game.actors.getName(m[2].trim())
@@ -1003,9 +1029,30 @@ class DevChatProcessor extends ChatProcessor {
         game.messages.documentClass.deleteDocuments([], { deleteAll: true })
         break
       }
-      case 'reset': {
-        GURPS.executeOTF('/sel *\\\\/sr [/hp reset]\\\\/sr [/fp reset]\\\\/sr [/st clear]')
-        break
+      case 'resetstatus': {
+        for (let t of canvas.tokens.controlled) {
+          console.log(`Checking ${t.name}`)
+          const effect = t.actor.effects.contents;
+          for (let i = 0; i < effect.length; i++) {
+            let condition = effect[i].label;
+            let status = effect[i].disabled;
+            let effect_id = effect[i]._id;
+            console.log(`Removing from ${t.name} condition: [${condition}] status: [${status}] effect_id: [${effect_id}]`)
+            if (status === false) {
+                try {
+                  await _token.actor.deleteEmbeddedDocuments("ActiveEffect", [effect_id]);
+                } catch (error) {
+                  console.log(error)
+                }
+            }
+          } 
+        }  
+        break;
+      }
+      default: {
+        this.prnt('open &lt;name&gt;')
+        this.prnt('clear')
+        this.prnt('resetstatus')
       }
     }
   }
@@ -1109,5 +1156,43 @@ class StopChatProcessor extends ChatProcessor {
       return false
     }
     GURPS.LastActor.RepeatAnimation = false
+  }
+}
+
+class ModChatProcessor extends ChatProcessor {
+  help() {
+    return '/mod c|clear|&lt;OtF modifier&gt;'
+  }
+
+  matches(line) {
+    this.match = line.match(/^\/mod *(clear|c)?(.*)/i)
+    return !!this.match
+  }
+
+  async process(line) {
+    if (!GURPS.LastActor) {
+      ui.notifications.warn(i18n('GURPS.chatYouMustHaveACharacterSelected'))
+      return false
+    }
+    let actor = GURPS.LastActor
+    let uc = "(" + i18n("GURPS.equipmentUserCreated") + ")"
+    if (!!this.match[1]) {
+      if (actor.system.conditions.usermods) {
+        let m = actor.system.conditions.usermods.filter(i => !i.endsWith(uc))
+        actor.update({ 'system.conditions.usermods' : m }).then(() => GURPS.EffectModifierControl.refresh())
+      }
+      return true 
+    }
+    let action = parselink(this.match[2].trim())
+    if (action.action?.type == 'modifier') {
+      let mods = actor.system.conditions.usermods ? [...actor.system.conditions.usermods] : []
+      mods.push(action.action.orig + " " + uc)
+      actor.update({"system.conditions.usermods": mods}).then(() => GURPS.EffectModifierControl.refresh())
+    } else {
+      this.prnt(actor.name + " => " + i18n("GURPS.modifier") )
+      actor.system.conditions.usermods?.forEach(m => this.prnt(m))
+      //ui.notifications.warn(i18n("GURPS.chatUnrecognizedFormat"))
+    }
+    return true
   }
 }

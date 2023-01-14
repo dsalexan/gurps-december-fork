@@ -1,18 +1,112 @@
 ### [Users Guide](https://bit.ly/2JaSlQd) for GURPS 4e Game Aid for Foundry VTT
 
-If you can't access the Google doc, here is a [PDF](https://github.com/crnormand/gurps/raw/main/docs/Guide%20for%20GURPS%204e%20on%20Foundry%20VTT.pdf) of the latest version.
+Release 0.15.24
 
-Release 0.15.7
+- Remove the leading + from Accuracy bonus on the characte sheets. (In preparation to handle accuracy mods like "5+2"..."+5+2" just looks too weird.)
+
+Release 0.15.23 01/11/2023
+
+- Fixed system.json to point to correct files.
+
+Release 0.15.22 01/10/2023
+
+- Allow Tracker conditions to contain OtFs (useful for mods)
+- Fixed reveal/hide buttons for secret sections on Journals
+- Allow Drag bucket to chat log
+
+Release 0.15.21 01/09/2023
+
+- Fixed removing effect updates modifier window immediately
+
+Release 0.15.20 01/09/2023
+
+- Fixed error when tooltip opens on actor without any user modifiers
+- Fixed layout issue with effects modifier window (jumping every time new token selected)
+
+Release 0.15.19 01/08/2023
+
+- Add /mod command to allow setting of effects modifiers
+- Change modifier tooltip to use effects modifiers
+- Added drag and drop to Effect Modifier panel
+- Default to opening Effects Modifier panel to left of the sidebar
+- Added modifiers to Basic Abstract Difficulty icons
+- Fixed drag and drop into Journal Entries
+
+Release 0.15.18 12/31/2022
+
+- Update to JB2a 0.5.3
+- Fix editing of Will and Per attributes (thanks @JT314!)
+- (Hopefully) fix the display of the rollable attribute on the GCS actor sheet.
+- Include src ID for attributes rolled directly from the charactersheet.
+
+Release 0.15.17 12/15/2022
+
+- Allow attribute rolls (IQ, DX, etc.) to remember which character they came from using OtF sourceId (for GMs with multiple NPCs)
+- Add support for RcL < 1 (0.5), to support a weapon that shoots 2 rounds per attempt
+- Fix /st ... @self to work with /sr command
+- Workaround for UI blowing up (if player clicked on damage chat window to see rolls). Rolls are now always shown for damage chat msgs
+
+Release 0.15.16 12/08/2022
+
+- Added support for list of files using /sound chat command. /sound /dir/somefile.txt read text file (list of file names) and randomly picks one
+- Prevent /anim error if no token or actor selected
+- Fixed parsing of attacks with single quotes in name
+
+Release 0.15.15 12/07/2022
+
+- Fixed /anim targeting code is Warpgate is missing
+
+Release 0.15.14 12/06/2022
+
+- Fixed overlapping Github tags
+
+Release 0.15.13 12/06/2022
+
+- Added support for Warpgate module (in animations). HIGHLY RECOMMENDED!
+- Shortened "Roll Damage" to "Damage" in successful hit msg
+- Show error if PDF book code not found
+- Allow case insensitive OTF for PDF
+- Foundry item rename now correctly renames ranged attacks
+- Fixed error in en lang selection warning
+- Rounded down Strength based ranges to nearest integer
+- Updated to JB2A 0.5.2
+
+Release 0.15.12 11/17/2022
+
+- Fixed chat display of OTF modifiers (including "+0")
+
+Release 0.15.11 11/10/2022
+
+- Change Github release.yml to include 'utils'
+- Fixed more Item issues caused by the v9->v10 upgrade. Items will now split and combine by name.
+
+Release 0.15.10 11/10/2022
+
+- Change system.json to report RAW zip file (will fix /anim issues)
+
+Release 0.15.9 11/10/2022
+
+- Update to JB2A 0.5.1
+- Fix for https://github.com/crnormand/gurps/issues/1644 (Mod Bucket stops after one modifier is clicked if not using mouseover to open).
+- Fixed MANY issues with Items in Foundry v10
+- Fixed alternate attribute based OtFs, e.g. Sk:Brawling (Based:ST)
+
+Release 0.15.8 11/06/2022
+
+- Fixed portrait upload not working for users
+- Fixed modifier not updating for multiple selections in some instances
+
+Release 0.15.7 10/10/2022
 
 - Fixed chat commands not returning true/false (for use in /if commands)
 - Fixed trackers not setting max value on import.
 - Fixed UI being moved off-screen when expanding damage calculation.
 
-Release 0.15.6
+Release 0.15.6 10/02/2022
 
 - Fixed GCS 5 import when melee attack has no level.
 - Fixed GCS 5 disad calculations.
-- Added support for /st + standing to allow you to clear other postures (to help supoprt TAH feature)
+- Added support for /st + standing to allow you to clear other postures (to help support TAH feature)
 - Update to JB2A 0.5.0
 
 Release 0.15.5 9/28/2022

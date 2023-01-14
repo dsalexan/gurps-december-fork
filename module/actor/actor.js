@@ -87,7 +87,7 @@ export class GurpsActor extends Actor {
   getOwners() {
     return game.users?.contents.filter(u => this.getUserLevel(u) >= CONST.DOCUMENT_PERMISSION_LEVELS.OWNER)
   }
-
+  
   // 0.8.x added steps necessary to switch sheets
   /**
    * @param {Application} newSheet
@@ -199,7 +199,7 @@ export class GurpsActor extends Actor {
         orig = []
       }
     }
-    for (const item of good) await this.addItemData(item.system) // re-add the item equipment and features
+    for (const item of good) await this.addItemData(item) // re-add the item equipment and features
 
     await this.internalUpdate({ '_stats.systemVersion': game.system.version }, { diff: false, render: false })
     // Set custom trackers based on templates.  should be last because it may need other data to initialize...
@@ -431,7 +431,8 @@ export class GurpsActor extends Actor {
               let locs = splitArgs(m[2])
               locpatterns = locs.map(l => new RegExp(makeRegexPatternFrom(l), 'i'))
             }
-            recurselist(data.hitlocations, (e, k, d) => {
+            recurselist(data.hitlocations, (e, _k, _d) => {
+              // console.log(e, _k, _d)
               if (!locpatterns || locpatterns.find(p => !!e.where && e.where.match(p)) != null) {
                 let dr = e.dr ?? ''
                 dr += ''
@@ -441,6 +442,7 @@ export class GurpsActor extends Actor {
                   let dr2 = parseInt(m[3]) + delta
                   e.dr = dr + m[2] + dr2
                 } else if (!isNaN(parseInt(dr))) e.dr = parseInt(dr) + delta
+                //console.warn(e.where, e.dr)
               }
             })
           } // end DR
@@ -466,7 +468,7 @@ export class GurpsActor extends Actor {
       })
     return eqtkey
   }
-
+  
   /**
    * @param {{ [key: string]: any }} dict
    * @param {string} type
@@ -658,7 +660,9 @@ export class GurpsActor extends Actor {
       } else {
         m = rng.match(/^ *[xX]([\d\.]+) *\/ *[xX]([\d\.]+) *$/)
         if (m) {
-          rng = `${parseFloat(m[1]) * st}/${parseFloat(m[2]) * st}`
+          let r1 = parseFloat(m[1]) * st
+          let r2 = parseFloat(m[2]) * st
+          rng = `${parseInt(r1)}/${parseInt(r2)}`
         }
       }
       r.range = rng
@@ -1214,27 +1218,16 @@ export class GurpsActor extends Actor {
       'system.traits': ts,
     }
 
-    if (!!p.portrait && game.settings.get(settings.SYSTEM_NAME, settings.SETTING_OVERWRITE_PORTRAITS)) {
-      const path = this.getPortraitPath()
-      let currentDir = ''
-      for (let i = 0; i < path.split('/').length; i++) {
-        try {
-          currentDir += path.split('/')[i] + '/'
-          await FilePicker.createDirectory('data', currentDir)
-        } catch (err) {
-          continue
-        }
+    if (p.portrait) {
+      if (game.user.hasPermission('FILES_UPLOAD')) {
+        r.img = `data:image/png;base64,${p.portrait}.png`
+      } else {
+        await ui.notifications.error(
+          'You do not have "FILES_UPLOAD" permission, portrait upload has failed. Please ask your GM to import your character, or acquire the correct permissions.'
+        )
       }
-      const filename = `${this.removeAccents(p.name)}${this.id}_portrait.png`.replaceAll(' ', '_')
-      const url = `data:image/png;base64,${p.portrait}`
-      await fetch(url)
-        .then(res => res.blob())
-        .then(blob => {
-          const file = new File([blob], filename)
-          FilePicker.upload('data', path, file, {}, { notify: false })
-        })
-      r.img = (path + '/' + filename).replaceAll(' ', '_').replaceAll('//', '/')
     }
+
     return r
   }
 
@@ -3590,33 +3583,33 @@ export class GurpsActor extends Actor {
     if (!!this.isOwner && !!srcActor.isOwner) {
       // same owner
       if (eqt.count < 2) {
-        let destKey = this._findEqtkeyForId('globalid', eqt.globalid)
+        let destKey = this._findEqtkeyForId('name', eqt.name)
         if (!!destKey) {
           // already have some
           let destEqt = getProperty(this, destKey)
-          await this.updateEqtCount(destKey, destEqt.count + eqt.count)
+          await this.updateEqtCount(destKey, +destEqt.count + +eqt.count)
           await srcActor.deleteEquipment(dragData.key)
         } else {
           let item = await srcActor.deleteEquipment(dragData.key)
-          await this.addNewItemData(item.data)
+          await this.addNewItemData(item)
         }
       } else {
         let content = await renderTemplate('systems/gurps/templates/transfer-equipment.html', { eqt: eqt })
         let callback = async (/** @type {JQuery<HTMLElement> | HTMLElement} */ html) => {
           // @ts-ignore
           let qty = parseInt(html.find('#qty').val())
-          let destKey = this._findEqtkeyForId('globalid', eqt.globalid)
+          let destKey = this._findEqtkeyForId('name', eqt.name)
           if (!!destKey) {
             // already have some
             let destEqt = getProperty(this, destKey)
-            await this.updateEqtCount(destKey, destEqt.count + qty)
+            await this.updateEqtCount(destKey, +destEqt.count + qty)
           } else {
             let item = /** @type {GurpsItem} */ (srcActor.items.get(eqt.itemid))
             item.system.eqt.count = qty
-            await this.addNewItemData(item.data)
+            await this.addNewItemData(item)
           }
           if (qty >= eqt.count) await srcActor.deleteEquipment(dragData.key)
-          else await srcActor.updateEqtCount(dragData.key, eqt.count - qty)
+          else await srcActor.updateEqtCount(dragData.key, +eqt.count - qty)
         }
 
         Dialog.prompt({
@@ -3655,7 +3648,7 @@ export class GurpsActor extends Actor {
           destuserid: destowner.id,
           destactorid: this.id,
           itemData: dragData.itemData,
-          count: count,
+          count: +count,
         })
       } else ui.notifications?.warn(i18n('GURPS.youDoNotHavePermssion'))
     }
@@ -3671,7 +3664,7 @@ export class GurpsActor extends Actor {
     this.ignoreRender = true
     if (item.id) await this._removeItemAdditions(item.id)
     let _data = GurpsItem.asGurpsItem(item).system
-    let oldkey = this._findEqtkeyForId('globalid', _data.globalid)
+    let oldkey = this._findEqtkeyForId('itemid', item.id)
     var oldeqt
     if (!!oldkey) oldeqt = getProperty(this, oldkey)
     let other = item.id ? await this._removeItemElement(item.id, 'equipment.other') : null // try to remove from other
@@ -3683,7 +3676,7 @@ export class GurpsActor extends Actor {
       // If was in other... just add back to other (and forget addons)
       await this._addNewItemEquipment(item, 'system.equipment.other.' + zeroFill(0))
     }
-    let newkey = this._findEqtkeyForId('globalid', _data.globalid)
+    let newkey = this._findEqtkeyForId('itemid', item.id)
     if (!!oldeqt && (!!oldeqt.contains || !!oldeqt.collapsed)) {
       this.update({
         [newkey + '.contains']: oldeqt.contains,
@@ -3702,7 +3695,10 @@ export class GurpsActor extends Actor {
   async addNewItemData(itemData, targetkey = null) {
     let d = itemData
     // @ts-ignore
-    if (typeof itemData.toObject === 'function') d = itemData.toObject()
+    if (typeof itemData.toObject === 'function') {
+      d = itemData.toObject()
+      d.system.eqt.count = itemData.system.eqt.count    // For some reason the count isn't deepcopied correctly.
+    }
     // @ts-ignore
     let localItems = await this.createEmbeddedDocuments('Item', [d]) // add a local Foundry Item based on some Item data
     let localItem = localItems[0]
@@ -4059,7 +4055,7 @@ export class GurpsActor extends Actor {
       if (rawItem) {
         let item = GurpsItem.asGurpsItem(rawItem)
         item.system.eqt.count = count
-        await this.addNewItemData(item.data, targetkey)
+        await this.addNewItemData(item, targetkey)
         await this.updateParentOf(targetkey, true)
       }
       this._forceRender()

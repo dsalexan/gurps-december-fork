@@ -3,7 +3,7 @@ import { parselink } from '../../lib/parselink.js'
 import * as HitLocations from '../hitlocation/hitlocation.js'
 import * as Settings from '../../lib/miscellaneous-settings.js'
 import GurpsWiring from '../gurps-wiring.js'
-
+import { gurpslink } from '../../module/utilities/gurpslink.js'
 /**
  * The ModifierBucketEditor displays the popup (tooltip) window where modifiers can be applied
  * to the current or other actors.
@@ -30,6 +30,10 @@ export default class ModifierBucketEditor extends Application {
       scale: scale,
       classes: ['modifier-bucket'],
     })
+  }
+
+  get title() {
+    return 'Modifiers'
   }
 
   /**
@@ -63,6 +67,11 @@ export default class ModifierBucketEditor extends Application {
     })
     return bucketPages
   }
+  
+  convertModifiers(list) {
+    return list.map(it => `[${i18n(it)}]`).map(it => gurpslink(it))
+  }
+
 
   /**
    * @override
@@ -98,11 +107,27 @@ export default class ModifierBucketEditor extends Application {
     data.currentmods = []
 
     if (!!GURPS.LastActor) {
+      let self = this.convertModifiers(GURPS.LastActor.system.conditions.self.modifiers)
+      self.forEach(e => data.currentmods.push(e))
+
+      let target = this.convertModifiers(GURPS.LastActor.system.conditions.target.modifiers)
+      if (target.length > 0) {
+        data.currentmods.push(horiz(i18n("GURPS.targetedModifiers")))
+        target.forEach(e => data.currentmods.push(e))
+      }
+      let user = this.convertModifiers(GURPS.LastActor.system.conditions.usermods ? GURPS.LastActor.system.conditions.usermods : [])
+      if (user.length > 0) {
+      let uc = "(" + i18n("GURPS.equipmentUserCreated") + ")"
+        data.currentmods.push(horiz(i18n("GURPS.equipmentUserCreated")))
+        user.forEach(e => data.currentmods.push(e.replace(uc, '')))
+      }
+
+/*
       let melee = []
       let ranged = []
       let defense = []
       let gen = []
-
+      
       let effects = GURPS.LastActor.effects.filter(e => !e.disabled)
       for (let effect of effects) {
         let type = effect.flags?.core?.statusId
@@ -130,6 +155,7 @@ export default class ModifierBucketEditor extends Application {
         data.currentmods.push(horiz('Defense'))
         defense.forEach(e => data.currentmods.push(e))
       }
+*/
     }
     return data
   }
