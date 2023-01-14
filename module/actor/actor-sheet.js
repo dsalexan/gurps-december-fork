@@ -1702,8 +1702,8 @@ export class GurpsActorEditorSheet extends GurpsActorSheet {
 
   //TODO: Don't let user change the sheet in case of user having limited access and the sheet is left in editor mode by someone else
 
-  getData() {
-    const sheetData = super.getData()
+  getData(options) {
+    const sheetData = super.getData(options)
     sheetData.isEditing = true
     return sheetData
   }
