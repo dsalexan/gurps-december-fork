@@ -100,6 +100,7 @@ if (!globalThis.GURPS) {
   }
 
   GURPS.GurpsActor = GurpsActor
+  GURPS.GurpsToken = GurpsToken
 
   GurpsActor.listen()
   GurpsToken.listen()
